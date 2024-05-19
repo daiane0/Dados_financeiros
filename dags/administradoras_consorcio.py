@@ -8,6 +8,7 @@ from psycopg2.extras import execute_values
 from conexao_db import connect_db
 
 def collect_and_save_data():
+<<<<<<< HEAD
 
     url = "https://olinda.bcb.gov.br/olinda/servico/Instituicoes_em_funcionamento/versao/v1/odata/SedesConsorcios?$top=100000&$format=json"
 
@@ -19,6 +20,22 @@ def collect_and_save_data():
 
     curs = conexao.cursor()
 
+=======
+    # URL da API
+    url = "https://olinda.bcb.gov.br/olinda/servico/Instituicoes_em_funcionamento/versao/v1/odata/SedesConsorcios?$top=100000&$format=json"
+
+    # Fazer a requisição para obter os dados
+    requisicao = requests.get(url)
+    info = requisicao.json()
+
+    # Conectar ao banco de dados PostgreSQL
+    conexao = connect_db
+
+    # Criar cursor
+    curs = conexao.cursor()
+
+    # Criar a tabela se não existir
+>>>>>>> origin/master
     curs.execute(
         """
         CREATE TABLE IF NOT EXISTS administradoras_consorcio (

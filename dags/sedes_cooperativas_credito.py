@@ -15,7 +15,11 @@ def collect_and_save_data():
     info = requisicao.json()
 
     # Conectar ao banco de dados PostgreSQL
+<<<<<<< HEAD
     conexao = connect_db()
+=======
+    conexao = connect_db
+>>>>>>> origin/master
     # Criar cursor
     curs = conexao.cursor()
 
