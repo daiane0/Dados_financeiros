@@ -13,11 +13,8 @@ def collect_and_save_data():
     requisicao = requests.get(url)
     info = requisicao.json()
 
-<<<<<<< HEAD
+
     conexao = connect_db()
-=======
-    conexao = connect_db
->>>>>>> origin/master
 
     curs = conexao.cursor()
 
