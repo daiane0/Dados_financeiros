@@ -7,19 +7,17 @@ from psycopg2.extras import execute_values
 from conexao_db import connect_db
 
 def collect_and_save_data():
-    # URL da API
+
     url = "https://olinda.bcb.gov.br/olinda/servico/Instituicoes_em_funcionamento/versao/v1/odata/SedesSociedades?$top=10000&$format=json"
-    # Fazer a requisição para obter os dados
+
     requisicao = requests.get(url)
+
     info = requisicao.json()
 
-    # Conectar ao banco de dados PostgreSQL
-
     conexao = connect_db()
-    # Criar cursor
+
     curs = conexao.cursor()
 
-    # Criar a tabela se não existir
     curs.execute(""" 
              create table if not exists sociedades (
                 cnpj varchar,
@@ -41,15 +39,13 @@ def collect_and_save_data():
              )
              """)
     
-    existing_rows = set()
+
 
     curs.execute("select cnpj, nome_instituicao,  segmento, endereco, complemento, bairro, cep, municipio, uf, ddd, telefone, email, sitio_internet, municipio_ibge from sociedades")
 
-    for row in curs.fetchall():
-        existing_rows.add(row)
+    existing_rows = set(curs.fetchall())
 
 
-    # Preparar dados para inserção
     data_insert = []
 
     for dado in info['value']:
@@ -71,16 +67,15 @@ def collect_and_save_data():
                 dado['MUNICIPIO_IBGE']
             ))
 
-    # SQL para inserir os dados
-    sql = "INSERT INTO sociedades (cnpj, nome_instituicao,  segmento, endereco, complemento, bairro, cep, municipio, uf, ddd, telefone, email, sitio_internet, municipio_ibge) VALUES %s"
-    # Executar a inserção dos dados
-    execute_values(curs, sql, data_insert)
+    if data_insert:
+        sql = "INSERT INTO sociedades (cnpj, nome_instituicao,  segmento, endereco, complemento, bairro, cep, municipio, uf, ddd, telefone, email, sitio_internet, municipio_ibge) VALUES %s"
 
-    # Commit e fechar conexão
-    conexao.commit()
+        execute_values(curs, sql, data_insert)
+
+        conexao.commit()
+
     conexao.close()
 
-# Configuração da DAG
 default_args = {
     'owner': 'airflow',
     'depends_on_past': False,
@@ -93,10 +88,9 @@ dag = DAG(
     'sedes_sociedades',
     default_args=default_args,
     description='DAG para coleta e salvamento de dados',
-    schedule_interval=timedelta(days=1),  # Executar a cada 24 horas
+    schedule_interval=timedelta(days=1),  
 )
 
-# Tarefa para coletar e salvar os dados
 collect_and_save_data_task = PythonOperator(
     task_id='collect_and_save_data_task',
     python_callable=collect_and_save_data,

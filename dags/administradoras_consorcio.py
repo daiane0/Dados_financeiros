@@ -8,8 +8,8 @@ from psycopg2.extras import execute_values
 from conexao_db import connect_db
 
 def collect_and_save_data():
-    url = "https://olinda.bcb.gov.br/olinda/servico/Instituicoes_em_funcionamento/versao/v1/odata/SedesConsorcios?$top=100000&$format=json"
 
+    url = "https://olinda.bcb.gov.br/olinda/servico/Instituicoes_em_funcionamento/versao/v1/odata/SedesConsorcios?$top=100000&$format=json"
 
     requisicao = requests.get(url)
     info = requisicao.json()
@@ -18,11 +18,9 @@ def collect_and_save_data():
 
     curs = conexao.cursor()
 
-
     curs.execute(
         """
         CREATE TABLE IF NOT EXISTS administradoras_consorcio (
-            id SERIAL PRIMARY KEY,
             cnpj VARCHAR,
             nome_instituicao VARCHAR,
             endereco VARCHAR,
@@ -37,21 +35,29 @@ def collect_and_save_data():
             sitio_internet VARCHAR,
             municipio_ibge VARCHAR,
             data_recebido timestamp default current_timestamp
-        )
-        """
-    )
+        )""")
 
-    # Verificar se os registros já existem na tabela
-    existing_rows = set()
+    
     curs.execute("SELECT cnpj, nome_instituicao, endereco, complemento, bairro, cep, municipio, uf, ddd, telefone, email, sitio_internet, municipio_ibge FROM administradoras_consorcio")
-    for row in curs.fetchall():
-        existing_rows.add(row)
 
+    existing_rows = set(curs.fetchall())
 
-    # Preparar dados para inserção
     data_insert = []
+
     for dado in info['value']:
-        if tuple([dado['CNPJ'], dado['NOME_INSTITUICAO'], dado['ENDERECO'], dado['COMPLEMENTO'], dado['BAIRRO'], dado['CEP'], dado['MUNICIPIO'], dado['UF'], dado['DDD'], dado['TELEFONE'], dado['E_MAIL'], dado['SITIO_NA_INTERNET'], dado['MUNICIPIO_IBGE']]) not in existing_rows:
+        if tuple([dado['CNPJ'],
+                  dado['NOME_INSTITUICAO'], 
+                  dado['ENDERECO'], 
+                  dado['COMPLEMENTO'], 
+                  dado['BAIRRO'], 
+                  dado['CEP'], 
+                  dado['MUNICIPIO'], 
+                  dado['UF'], 
+                  dado['DDD'], 
+                  dado['TELEFONE'], 
+                  dado['E_MAIL'], 
+                  dado['SITIO_NA_INTERNET'], 
+                  dado['MUNICIPIO_IBGE']]) not in existing_rows:
             data_insert.append((
                 dado['CNPJ'], 
                 dado['NOME_INSTITUICAO'], 
@@ -68,18 +74,15 @@ def collect_and_save_data():
                 dado['MUNICIPIO_IBGE']
             ))
 
-    # SQL para inserir os dados
-    sql = "INSERT INTO administradoras_consorcio (cnpj, nome_instituicao, endereco, complemento, bairro, cep, municipio, uf, ddd, telefone, email, sitio_internet, municipio_ibge) VALUES %s"
-
-    # Executar a inserção dos dados
     if data_insert:
-        execute_values(curs, sql, data_insert)
+        sql = "INSERT INTO administradoras_consorcio (cnpj, nome_instituicao, endereco, complemento, bairro, cep, municipio, uf, ddd, telefone, email, sitio_internet, municipio_ibge) VALUES %s"
 
-    # Commit e fechar conexão
-    conexao.commit()
+        execute_values(curs, sql, data_insert)
+        conexao.commit()
+
+
     conexao.close()
 
-# Configuração da DAG
 default_args = {
     'owner': 'airflow',
     'depends_on_past': False,
@@ -92,10 +95,9 @@ dag = DAG(
     'sedes_administradoras_consorcio',
     default_args=default_args,
     description='DAG para coleta e salvamento de dados',
-    schedule_interval=timedelta(days=1),  # Executar a cada 24 horas
+    schedule_interval=timedelta(days=1),  
 )
 
-# Tarefa para coletar e salvar os dados
 collect_and_save_data_task = PythonOperator(
     task_id='collect_and_save_data_task',
     python_callable=collect_and_save_data,

@@ -38,15 +38,29 @@ def collect_and_save_data():
                 municipio_ibge varchar,
                 data_recebido timestamp default current_timestamp)"""  )
     
-    existing_rows = set()
+
     curs.execute("select cnpj, nome_instituicao, segmento, endereco_sede, complemento, bairro, cep, municipio, uf, ddd, telefone, carteira_comercial, email, sitio_internet, municipio_ibge from bancos")
-    for row in curs.fetchall():
-        existing_rows.add(row)
+
+    existing_rows = set(curs.fetchall())
 
     data_insert = []
     
     for dado in info['value']:
-        if tuple([dado['CNPJ'], dado['NOME_INSTITUICAO'], dado['SEGMENTO'], dado['ENDERECO'], dado['COMPLEMENTO'], dado['BAIRRO'], dado['CEP'], dado['MUNICIPIO'], dado['UF'], dado['DDD'], dado['TELEFONE'], dado['CARTEIRA_COMERCIAL'], dado['E_MAIL'], dado['SITIO_NA_INTERNET'], dado['MUNICIPIO_IBGE']]) not in existing_rows:
+        if tuple([dado['CNPJ'],
+                  dado['NOME_INSTITUICAO'], 
+                  dado['SEGMENTO'], 
+                  dado['ENDERECO'], 
+                  dado['COMPLEMENTO'], 
+                  dado['BAIRRO'], 
+                  dado['CEP'], 
+                  dado['MUNICIPIO'], 
+                  dado['UF'], 
+                  dado['DDD'], 
+                  dado['TELEFONE'], 
+                  dado['CARTEIRA_COMERCIAL'], 
+                  dado['E_MAIL'], 
+                  dado['SITIO_NA_INTERNET'], 
+                  dado['MUNICIPIO_IBGE']]) not in existing_rows:
             data_insert.append((
                 dado['CNPJ'],
                 dado['NOME_INSTITUICAO'],
@@ -66,11 +80,14 @@ def collect_and_save_data():
             ))
 
 
-    sql = "INSERT INTO bancos (cnpj, nome_instituicao, segmento, endereco_sede, complemento, bairro, cep, municipio, uf, ddd, telefone, carteira_comercial, email, sitio_internet, municipio_ibge) VALUES %s "
+    if data_insert:
 
-    execute_values(curs, sql, data_insert)
+        sql = "INSERT INTO bancos (cnpj, nome_instituicao, segmento, endereco_sede, complemento, bairro, cep, municipio, uf, ddd, telefone, carteira_comercial, email, sitio_internet, municipio_ibge) VALUES %s "
 
-    conexao.commit()
+        execute_values(curs, sql, data_insert)
+
+        conexao.commit()
+        
     conexao.close()
 
 
