@@ -11,40 +11,19 @@ def collect_and_save_data():
 
     url = "https://olinda.bcb.gov.br/olinda/servico/Informes_Agencias/versao/v1/odata/Agencias?$top=100000&$format=json"
 
+
     requisicao = requests.get(url)
     info = requisicao.json()
 
     conexao = connect_db()
 
     curs = conexao.cursor()
-
-    curs.execute("""
-        create table if not exists agencias (
-        cnpj varchar,
-        sequencial_cnpj varchar,
-        digitos_verificadores_cnpj varchar,
-        nome_da_instituicao varchar,
-        segmento varchar,
-        cod_comp varchar,
-        nome_agencia varchar,
-        endereco varchar,
-        numero varchar,
-        comlemento varchar,
-        bairro varchar,
-        cep varchar,
-        cod_ibge_municipio varchar,
-        municipio varchar,
-        uf varchar,
-        data_inicio varchar,
-        ddd varchar,
-        fone varchar,
-        posicao varchar
-     )""")
     
-    
-    curs.execute("select  cnpj, sequencial_cnpj, digitos_verificadores_cnpj, nome_da_instituicao, segmento, cod_comp, nome_agencia, endereco, numero, compelmento, bairro, cep, cod_ibge_municipio, municipio, uf, data_inicio, ddd, fone, posicao from agencias")
+    curs.execute("select  cnpj, sequencial_cnpj, digitos_verificadores_cnpj, nome_da_instituicao, segmento, cod_comp, nome_agencia, endereco, numero, complemento, bairro, cep, cod_ibge_municipio, municipio, uf, data_inicio, ddd, fone, posicao from agencias")
 
-    existing_rows = set(curs.fetchall())
+    existing_rows = curs.fetchall()
+
+    print("Número de registros existentes na tabela:", len(existing_rows))
 
     data_insert = []
 
@@ -89,9 +68,13 @@ def collect_and_save_data():
                                 dado['DDD'], 
                                 dado['Telefone'], 
                                 dado['Posicao'] ))
+            
+    print("Número de novos registros a serem inseridos:", len(data_insert))
 
     if data_insert:
-        sql = "INSERT INTO agencias (cnpj , sequencial_cnpj , digitos_verificadores_cnpj , nome_da_instituicao , segmento , cod_comp , nome_agencia ,endereco , numero , compelmento , bairro , cep , cod_ibge_municipio , municipio , uf , data_inicio , ddd , fone , posicao) VALUES %s "
+        sql = "INSERT INTO agencias (cnpj , sequencial_cnpj , digitos_verificadores_cnpj , nome_da_instituicao , segmento , cod_comp , nome_agencia ,endereco , numero , complemento , bairro , cep , cod_ibge_municipio , municipio , uf , data_inicio , ddd , fone , posicao) VALUES %s "
+
+        print("Inserindo novos registros na tabela.")
 
         execute_values(curs, sql, data_insert)
         conexao.commit()

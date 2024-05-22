@@ -20,34 +20,6 @@ def collect_and_save_data(**kwargs):
     curs = conexao.cursor()
 
     curs.execute("""
-        CREATE TABLE IF NOT EXISTS info_cadastral_entidades (
-            data_base VARCHAR,
-            codigo_cadastro_bacen VARCHAR,
-            codigo_sisbacen VARCHAR,
-            codigo_pais_sede VARCHAR,
-            nome_pais_sede VARCHAR,
-            nome_uf_sede VARCHAR,
-            codigo_municipio_sede VARCHAR,
-            nome_municipio_sede VARCHAR,
-            nome_entidade VARCHAR,
-            nome_entidade_nao_formatado VARCHAR,
-            cnpj VARCHAR,
-            cnpj_raiz VARCHAR,
-            codigo_situacao VARCHAR,
-            descricao_situacao VARCHAR,
-            codigo_tipo_entidade_segmento VARCHAR,
-            nome_tipo_entidade VARCHAR,
-            codigo_natureza_juridica VARCHAR,
-            descricao_natureza_juridica VARCHAR,
-            codigo_esfera_publica VARCHAR,
-            nome_reduzido VARCHAR,
-            sigla_entidade VARCHAR,
-            nome_fantasia VARCHAR,
-            empresa_publica VARCHAR
-        )
-    """)
-
-    curs.execute("""
         SELECT codigo_cadastro_bacen, codigo_sisbacen, codigo_pais_sede, 
                nome_pais_sede, nome_uf_sede, codigo_municipio_sede, nome_municipio_sede, 
                nome_entidade, nome_entidade_nao_formatado, cnpj, cnpj_raiz, codigo_situacao, 
@@ -57,7 +29,7 @@ def collect_and_save_data(**kwargs):
         FROM info_cadastral_entidades
     """)
 
-    existing_rows = set(curs.fetchall())
+    existing_rows = curs.fetchall()
 
     data_insert = []
 

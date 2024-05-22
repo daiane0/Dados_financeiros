@@ -18,29 +18,10 @@ def collect_and_save_data():
 
     curs = conexao.cursor()
 
-    curs.execute(
-        """
-        CREATE TABLE IF NOT EXISTS administradoras_consorcio (
-            cnpj VARCHAR,
-            nome_instituicao VARCHAR,
-            endereco VARCHAR,
-            complemento VARCHAR,
-            bairro VARCHAR,
-            cep VARCHAR,
-            municipio VARCHAR,
-            uf VARCHAR,
-            ddd VARCHAR,
-            telefone VARCHAR,
-            email VARCHAR,
-            sitio_internet VARCHAR,
-            municipio_ibge VARCHAR,
-            data_recebido timestamp default current_timestamp
-        )""")
-
     
     curs.execute("SELECT cnpj, nome_instituicao, endereco, complemento, bairro, cep, municipio, uf, ddd, telefone, email, sitio_internet, municipio_ibge FROM administradoras_consorcio")
 
-    existing_rows = set(curs.fetchall())
+    existing_rows = curs.fetchall()
 
     data_insert = []
 

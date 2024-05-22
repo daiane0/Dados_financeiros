@@ -17,34 +17,9 @@ def collect_and_save_data():
 
     curs = conexao.cursor()
 
-    curs.execute("""
-             create table if not exists cooperativas_credito (
-                cnpj varchar,
-                nome varchar,
-                endereco varchar,
-                complemento varchar,
-                bairro varchar,
-                cep varchar,
-                municipio varchar,
-                uf varchar,
-                ddd varchar,
-                telefone varchar,
-                classe varchar,
-                criterio_associacao varchar,
-                categoria_cooperativa_singular varchar,
-                filiacao varchar,
-                email varchar,
-                sitio_internet varchar,
-                municipio_ibge varchar,
-                data_recebido timestamp default current_timestamp
-                
-                )"""
-                 )
-
-
     curs.execute("select cnpj, nome, endereco, complemento, bairro, cep, municipio, uf, ddd, telefone, classe, criterio_associacao, categoria_cooperativa_singular, filiacao, email, sitio_internet, municipio_ibge from cooperativas_credito")
 
-    existing_rows = set(curs.fetchall())
+    existing_rows = curs.fetchall()
 
     data_insert = []
 
