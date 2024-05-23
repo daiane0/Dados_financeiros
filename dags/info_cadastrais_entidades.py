@@ -8,7 +8,7 @@ from conexao_db import connect_db
 
 def collect_and_save_data(**kwargs):
 
-    data = datetime.now().strftime('%d-%m-%Y')
+    data = datetime.now().strftime('%m-%d-%Y')
 
     url = f"https://olinda.bcb.gov.br/olinda/servico/BcBase/versao/v2/odata/EntidadesSupervisionadas(dataBase=@dataBase)?@dataBase='{data}'&$top=10000&$format=json"
 
@@ -20,16 +20,34 @@ def collect_and_save_data(**kwargs):
     curs = conexao.cursor()
 
     curs.execute("""
-        SELECT codigo_cadastro_bacen, codigo_sisbacen, codigo_pais_sede, 
-               nome_pais_sede, nome_uf_sede, codigo_municipio_sede, nome_municipio_sede, 
-               nome_entidade, nome_entidade_nao_formatado, cnpj, cnpj_raiz, codigo_situacao, 
-               descricao_situacao, codigo_tipo_entidade_segmento, nome_tipo_entidade, 
-               codigo_natureza_juridica, descricao_natureza_juridica, codigo_esfera_publica, 
-               nome_reduzido, sigla_entidade, nome_fantasia, empresa_publica 
+        SELECT codigo_cadastro_bacen,
+            codigo_sisbacen,
+            codigo_pais_sede, 
+            nome_pais_sede,
+            nome_uf_sede,
+            codigo_municipio_sede, 
+            nome_municipio_sede, 
+            nome_entidade,
+            nome_entidade_nao_formatado,
+            cnpj, 
+            cnpj_raiz,
+            codigo_situacao, 
+            descricao_situacao,
+            codigo_tipo_entidade_segmento,
+            nome_tipo_entidade, 
+            codigo_natureza_juridica,
+            descricao_natureza_juridica,
+            codigo_esfera_publica, 
+            nome_reduzido,
+            sigla_entidade,
+            nome_fantasia, 
+            empresa_publica 
         FROM info_cadastral_entidades
     """)
 
     existing_rows = curs.fetchall()
+
+    print("Número de registros existentes na tabela:", len(existing_rows))
 
     data_insert = []
 
@@ -52,16 +70,16 @@ def collect_and_save_data(**kwargs):
             dado['descricaoTipoEntidadeSupervisionada'], 
             dado['codigoNaturezaJuridica'], 
             dado['descricaoNaturezaJuridica'],
-            dado['siglaDaPessoaJuridica'], 
             dado['codigoEsferaPublica'], 
             dado['nomeReduzido'], 
+            dado['siglaDaPessoaJuridica'], 
             dado['nomeFantasia'], 
             dado['indicadorEsferaPublica']
         )
         
         if dado_without_first_item not in existing_rows:
             data_insert.append((
-                dado['DataBase'],
+                dado['database'],
                 dado['codigoIdentificadorBacen'], 
                 dado['codigoSisbacen'], 
                 dado['siglaISO3digitos'], 
@@ -79,12 +97,14 @@ def collect_and_save_data(**kwargs):
                 dado['descricaoTipoEntidadeSupervisionada'], 
                 dado['codigoNaturezaJuridica'], 
                 dado['descricaoNaturezaJuridica'],
-                dado['siglaDaPessoaJuridica'], 
                 dado['codigoEsferaPublica'], 
                 dado['nomeReduzido'], 
+                dado['siglaDaPessoaJuridica'], 
                 dado['nomeFantasia'], 
                 dado['indicadorEsferaPublica']
             ))
+
+    print("Número de novos registros a serem inseridos:", len(data_insert))
 
     if data_insert:
         sql = """
@@ -97,14 +117,19 @@ def collect_and_save_data(**kwargs):
                 nome_reduzido, sigla_entidade, nome_fantasia, empresa_publica
             ) VALUES %s
         """
+
+        print("Inserindo novos registros na tabela.")
+
         execute_values(curs, sql, data_insert)
+
+        conexao.commit()
 
     conexao.close()
 
 default_args = {
     'owner': 'airflow',
     'depends_on_past': False,
-    'start_date': datetime(2024, 5, 12),
+    'start_date': datetime(2024, 5, 22),
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
 }
