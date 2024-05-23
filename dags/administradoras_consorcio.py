@@ -18,28 +18,10 @@ def collect_and_save_data():
 
     curs = conexao.cursor()
 
-    
-    curs.execute("SELECT cnpj, nome_instituicao, endereco, complemento, bairro, cep, municipio, uf, ddd, telefone, email, sitio_internet, municipio_ibge FROM administradoras_consorcio")
-
-    existing_rows = curs.fetchall()
-
     data_insert = []
 
     for dado in info['value']:
-        if tuple([dado['CNPJ'],
-                  dado['NOME_INSTITUICAO'], 
-                  dado['ENDERECO'], 
-                  dado['COMPLEMENTO'], 
-                  dado['BAIRRO'], 
-                  dado['CEP'], 
-                  dado['MUNICIPIO'], 
-                  dado['UF'], 
-                  dado['DDD'], 
-                  dado['TELEFONE'], 
-                  dado['E_MAIL'], 
-                  dado['SITIO_NA_INTERNET'], 
-                  dado['MUNICIPIO_IBGE']]) not in existing_rows:
-            data_insert.append((
+        data_insert.append((
                 dado['CNPJ'], 
                 dado['NOME_INSTITUICAO'], 
                 dado['ENDERECO'], 
@@ -56,7 +38,7 @@ def collect_and_save_data():
             ))
 
     if data_insert:
-        sql = "INSERT INTO administradoras_consorcio (cnpj, nome_instituicao, endereco, complemento, bairro, cep, municipio, uf, ddd, telefone, email, sitio_internet, municipio_ibge) VALUES %s"
+        sql = "INSERT INTO administradoras_consorcio (cnpj, nome_instituicao, endereco, complemento, bairro, cep, municipio, uf, ddd, telefone, email, sitio_internet, municipio_ibge) VALUES %s ON CONFLICT (cnpj, nome_instituicao, endereco, complemento, bairro, cep, municipio, uf, ddd, telefone, email, sitio_internet, municipio_ibge) DO NOTHING"
 
         execute_values(curs, sql, data_insert)
         conexao.commit()

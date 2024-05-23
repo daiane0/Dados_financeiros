@@ -19,66 +19,13 @@ def collect_and_save_data(**kwargs):
 
     curs = conexao.cursor()
 
-    curs.execute("""
-        SELECT codigo_cadastro_bacen,
-            codigo_sisbacen,
-            codigo_pais_sede, 
-            nome_pais_sede,
-            nome_uf_sede,
-            codigo_municipio_sede, 
-            nome_municipio_sede, 
-            nome_entidade,
-            nome_entidade_nao_formatado,
-            cnpj, 
-            cnpj_raiz,
-            codigo_situacao, 
-            descricao_situacao,
-            codigo_tipo_entidade_segmento,
-            nome_tipo_entidade, 
-            codigo_natureza_juridica,
-            descricao_natureza_juridica,
-            codigo_esfera_publica, 
-            nome_reduzido,
-            sigla_entidade,
-            nome_fantasia, 
-            empresa_publica 
-        FROM info_cadastral_entidades
-    """)
-
-    existing_rows = curs.fetchall()
-
-    print("Número de registros existentes na tabela:", len(existing_rows))
 
     data_insert = []
 
     for dado in info['value']:
-        dado_without_first_item = (
-            dado['codigoIdentificadorBacen'], 
-            dado['codigoSisbacen'], 
-            dado['siglaISO3digitos'], 
-            dado['nomeDoPais'], 
-            dado['nomeDaUnidadeFederativa'], 
-            dado['codigoDoMunicipioNoIBGE'], 
-            dado['nomeDoMunicipio'], 
-            dado['nomeEntidadeInteresse'], 
-            dado['nomeEntidadeInteresseNaoFormatado'], 
-            dado['codigoCNPJ14'], 
-            dado['codigoCNPJ8'], 
-            dado['codigoTipoSituacaoPessoaJuridica'], 
-            dado['descricaoTipoSituacaoPessoaJuridica'], 
-            dado['codigoTipoEntidadeSupervisionada'], 
-            dado['descricaoTipoEntidadeSupervisionada'], 
-            dado['codigoNaturezaJuridica'], 
-            dado['descricaoNaturezaJuridica'],
-            dado['codigoEsferaPublica'], 
-            dado['nomeReduzido'], 
-            dado['siglaDaPessoaJuridica'], 
-            dado['nomeFantasia'], 
-            dado['indicadorEsferaPublica']
-        )
         
-        if dado_without_first_item not in existing_rows:
-            data_insert.append((
+    
+        data_insert.append((
                 dado['database'],
                 dado['codigoIdentificadorBacen'], 
                 dado['codigoSisbacen'], 
@@ -116,6 +63,13 @@ def collect_and_save_data(**kwargs):
                 codigo_natureza_juridica, descricao_natureza_juridica, codigo_esfera_publica, 
                 nome_reduzido, sigla_entidade, nome_fantasia, empresa_publica
             ) VALUES %s
+            ON CONFLICT (codigo_cadastro_bacen, codigo_sisbacen, codigo_pais_sede, 
+                             nome_pais_sede, nome_uf_sede, codigo_municipio_sede, nome_municipio_sede, 
+                             nome_entidade, nome_entidade_nao_formatado, cnpj, cnpj_raiz, codigo_situacao, 
+                             descricao_situacao, codigo_tipo_entidade_segmento, nome_tipo_entidade, 
+                             codigo_natureza_juridica, descricao_natureza_juridica, codigo_esfera_publica, 
+                             nome_reduzido, sigla_entidade, nome_fantasia, empresa_publica) 
+                DO NOTHING
         """
 
         print("Inserindo novos registros na tabela.")

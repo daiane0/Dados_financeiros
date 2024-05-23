@@ -17,15 +17,10 @@ def collect_and_save_data():
 
     curs = conexao.cursor()
 
-    curs.execute("select cnpj, nome, endereco, complemento, bairro, cep, municipio, uf, ddd, telefone, classe, criterio_associacao, categoria_cooperativa_singular, filiacao, email, sitio_internet, municipio_ibge from cooperativas_credito")
-
-    existing_rows = curs.fetchall()
-
     data_insert = []
 
     for dado in info['value']:
-        if tuple([dado['CNPJ'], dado['NOME_INSTITUICAO'], dado['ENDERECO'], dado['COMPLEMENTO'], dado['BAIRRO'], dado['CEP'], dado['MUNICIPIO'], dado['UF'], dado['DDD'], dado['TELEFONE'], dado['CLASSE'], dado['ASSOCIACAO'], dado['CATEGCOOPSING'], dado['FILIACAO'], dado['E_MAIL'], dado['SITIO_NA_INTERNET'], dado['MUNICIPIO_IBGE']]) not in existing_rows:
-            data_insert.append((
+        data_insert.append((
                 dado['CNPJ'], 
                 dado['NOME_INSTITUICAO'], 
                 dado['ENDERECO'], 
@@ -48,7 +43,7 @@ def collect_and_save_data():
 
 
     if data_insert:
-        sql = "INSERT INTO cooperativas_credito (cnpj, nome, endereco, complemento, bairro, cep, municipio, uf, ddd, telefone, classe, criterio_associacao, categoria_cooperativa_singular, filiacao, email, sitio_internet, municipio_ibge) VALUES %s"
+        sql = "INSERT INTO cooperativas_credito (cnpj, nome, endereco, complemento, bairro, cep, municipio, uf, ddd, telefone, classe, criterio_associacao, categoria_cooperativa_singular, filiacao, email, sitio_internet, municipio_ibge) VALUES %s ON CONFLICT (cnpj, nome, endereco, complemento, bairro, cep, municipio, uf, ddd, telefone, classe, criterio_associacao, categoria_cooperativa_singular, filiacao, email, sitio_internet, municipio_ibge) DO NOTHING"
 
 
         execute_values(curs, sql, data_insert)

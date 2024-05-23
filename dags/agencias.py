@@ -19,37 +19,12 @@ def collect_and_save_data():
 
     curs = conexao.cursor()
     
-    curs.execute("select  cnpj, sequencial_cnpj, digitos_verificadores_cnpj, nome_da_instituicao, segmento, cod_comp, nome_agencia, endereco, numero, complemento, bairro, cep, cod_ibge_municipio, municipio, uf, data_inicio, ddd, fone, posicao from agencias")
-
-    existing_rows = curs.fetchall()
-
-    print("Número de registros existentes na tabela:", len(existing_rows))
 
     data_insert = []
 
     for dado in info['value']:
-        dado_without_first_item = ((dado['CnpjBase'],
-                                    dado['CnpjSequencial'],
-                                    dado['CnpjDv'],
-                                    dado['NomeIf'],
-                                    dado['Segmento'], 
-                                    dado['CodigoCompe'], 
-                                    dado['NomeAgencia'], 
-                                    dado['Endereco'],
-                                    dado['Numero'], 
-                                    dado['Complemento'], 
-                                    dado['Bairro'], 
-                                    dado['Cep'], 
-                                    dado['MunicipioIbge'],
-                                    dado['Municipio'], 
-                                    dado['UF'], 
-                                    dado['DataInicio'], 
-                                    dado['DDD'], 
-                                    dado['Telefone'], 
-                                    dado['Posicao']))
 
-        if dado_without_first_item not in existing_rows:
-            data_insert.append((dado['CnpjBase'],
+        data_insert.append((dado['CnpjBase'],
                                 dado['CnpjSequencial'],
                                 dado['CnpjDv'],
                                 dado['NomeIf'],
@@ -72,7 +47,7 @@ def collect_and_save_data():
     print("Número de novos registros a serem inseridos:", len(data_insert))
 
     if data_insert:
-        sql = "INSERT INTO agencias (cnpj , sequencial_cnpj , digitos_verificadores_cnpj , nome_da_instituicao , segmento , cod_comp , nome_agencia ,endereco , numero , complemento , bairro , cep , cod_ibge_municipio , municipio , uf , data_inicio , ddd , fone , posicao) VALUES %s "
+        sql = "INSERT INTO agencias (cnpj , sequencial_cnpj , digitos_verificadores_cnpj , nome_da_instituicao , segmento , cod_comp , nome_agencia ,endereco , numero , complemento , bairro , cep , cod_ibge_municipio , municipio , uf , data_inicio , ddd , fone , posicao) VALUES %s ON CONFLICT (cnpj , sequencial_cnpj , digitos_verificadores_cnpj , nome_da_instituicao , segmento , cod_comp , nome_agencia ,endereco , numero , complemento , bairro , cep , cod_ibge_municipio , municipio , uf , data_inicio , ddd , fone ) DO NOTHING"
 
         print("Inserindo novos registros na tabela.")
 
