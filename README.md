@@ -9,6 +9,10 @@ Este projeto é um Data Warehouse (DW) que tem como objetivo consolidar dados p�
 - **Armazenamento**: Dados processados são carregados no Data Warehouse para análises e relatórios.
 
   ![Star schema](https://raw.githubusercontent.com/daiane0/Dados_financeiros/master/diagrama.png)
+  <br>
+<p align="center">
+  <em>Primeira versão do esquema estrela do Data Warehouse.</em>
+</p>
 
 ### Status Atual
 
