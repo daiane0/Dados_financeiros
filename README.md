@@ -8,9 +8,11 @@ Este projeto é um Data Warehouse (DW) que tem como objetivo consolidar dados p�
 - **Processamento**: Utilização de PySpark para transformar os dados.
 - **Armazenamento**: Dados processados são carregados no Data Warehouse para análises e relatórios.
 
+  ![Star schema](https://raw.githubusercontent.com/daiane0/Dados_financeiros/master/diagrama.png)
+
 ### Status Atual
 
-Atualmente, estou trabalhando na modelagem do DW e coletando dados de mais algumas fontes, para começar a tratar e automatizar todo o pipeline dos dados.
+Atualmente, estou trabalhando coletando dados de mais algumas fontes, e desenvolvendo o ETL para as dimensões.
 
 
 
