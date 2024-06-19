@@ -2,3 +2,4 @@ dags/conexao_db.py
 dags/__pycache__/
 generate_df.py
 conexao_db.py
+teste.ipynb
