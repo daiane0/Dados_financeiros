@@ -8,6 +8,7 @@ from pyspark.sql import DataFrame
 from pyspark.sql import functions as F
 from pyspark.sql.types import IntegerType
 from unidecode import unidecode
+import table_load_control as T
 
 
 os.environ['SPARK_HOME'] = '/home/daiane/spark-3.5.1-bin-hadoop3/'
@@ -20,24 +21,8 @@ spark = SparkSession.builder \
 
 spark
 
-# Função para obter a última data de carga
-def get_last_load_date(table_name, data_type):
-    sql_query = f"""
-        SELECT MAX(load_date) AS max_load_date
-          FROM dw_load_control
-         WHERE table_name = '{table_name}'
-           AND data_type = '{data_type}'
-    """
-    # Executar a consulta usando Spark SQL
-    result = spark.sql(sql_query)
-    
-    # Retornar a data mais recente encontrada
-    max_load_date = result.first()['max_load_date']
-    return max_load_date
-
-
 # data da última carga
-last_load_date = get_last_load_date('dim_endereco', 'sede')
+last_load_date = T.get_last_load_date('dim_endereco', 'sede', spark)
 
 df_bancos = table_to_df('finance_raw_data', 'bancos', spark).filter(col('data') > last_load_date)
 df_cooperativas_credito = table_to_df('finance_raw_data', 'cooperativas_credito', spark).filter(col('data') > last_load_date)
@@ -47,7 +32,7 @@ df_address_adm_consorcio = table_to_df('finance_raw_data', 'administradoras_cons
 #colunas para a dim_endereco: id, cnpj, address_type, registration_date, date_end, street,
 #complement, number,  neighborhood, city, postalcode, state
 
-colunas = ["cnpj", "data", "endereco","complemento", "bairro",  "municipio","cep", "uf"]
+colunas = ["cnpj", "data", "endereco","complemento", "bairro",  "municipio","cep", "uf", "cod_comp"]
 
 
 df_address_adm_consorcio_selected = df_address_adm_consorcio.select(colunas)
@@ -89,12 +74,9 @@ df_tipo_corrigido = df_enderecos.withColumn(
         F.regexp_replace(F.col("endereco"), r"^TV\.? ", "TRAVESSA ")
     ).when(
         F.col("endereco").rlike(r"^PC "),
-        F.regexp_replace(F.col("endereco"), r"^PC ", "PRACA ")
-    ).otherwise(F.col("endereco"))
-)
+        F.regexp_replace(F.col("endereco"), r"^PC ", "PRACA ")).otherwise(F.col("endereco")))
 
 df_tipo_corrigido.persist()
-
 
 regex = r"(\d+(?:\.\d+)?)"
 
@@ -120,9 +102,7 @@ df_numero = df_tipo_corrigido.withColumn("number",
             (F.col("endereco").like("%N %")) | (F.col("endereco").like("%N.")) | (F.col("endereco").like("%Nº")),
             F.regexp_extract(F.col("endereco"), r"N[ .º]?(\d+)", 1)
         ).otherwise(
-            F.regexp_extract(F.col("endereco"), regex, 0)
-        )
-    )
+            F.regexp_extract(F.col("endereco"), regex, 0)))
 ).withColumn("endereco",
     F.when(
         (F.col("number") != "") &
@@ -134,19 +114,14 @@ df_numero = df_tipo_corrigido.withColumn("number",
 
 df_numero.persist()
 
-
 pattern = "EXTRAIRAPARTIRDAQUI(.*)"
 
 df_pos_numero = df_numero.withColumn("apos_numero", F.regexp_extract("endereco", pattern, 1))
 
-
 df_pos_numero_tratado = df_pos_numero.withColumn("apos_numero", F.regexp_replace(F.col("apos_numero"), r'^[^a-zA-Z0-9]+', ''))
 
-df_pos_numero_tratado = df_pos_numero_tratado.withColumn(
-    "apos_numero",
-    F.when(F.col("apos_numero") != '', F.concat(F.col("apos_numero"), F.lit(' - '))).otherwise('')
-)
-
+df_pos_numero_tratado = df_pos_numero_tratado.withColumn("apos_numero",
+    F.when(F.col("apos_numero") != '', F.concat(F.col("apos_numero"), F.lit(' - '))).otherwise(''))
 
 df_pos_numero_tratado = df_pos_numero_tratado.withColumn("complemento",
                                                        F.concat(F.col("apos_numero"), F.col("complemento")))
@@ -163,10 +138,9 @@ df_pos_numero_tratado = df_endereco_sem_especial.drop("apos_numero")
 
 df_pos_numero_tratado.persist()
 
-df_pos_numero_tratado.createOrReplaceTempView("view_temporariaa")
+# df_pos_numero_tratado.createOrReplaceTempView("view_temporariaa")
 
-df = spark.sql("SELECT endereco, number, complemento, data FROM view_temporariaa").limit(50)
-
+# df = spark.sql("SELECT endereco, number, complemento, data FROM view_temporariaa").limit(50)
 
 def clean_accent_(texto):
     return unidecode(texto) if texto else None
@@ -191,20 +165,21 @@ df_data_formatada = df_unique.withColumn("data", F.to_date(F.col("data")))
 df_data_formatada_sample = df_data_formatada.sample(False, 0.1)
 
 
-df_colunas = df_data_formatada.select(df_data_formatada["data"].alias("registration_date"),
-                                    df_data_formatada["endereco"].alias("street"),
-                                     df_data_formatada["complemento"].alias("complement"),
-                                    df_data_formatada["bairro"].alias("neighborhood"),
-                                     df_data_formatada["municipio"].alias("city"),
-                                    df_data_formatada["cep"].alias("postalcode"),
-                                     df_data_formatada["uf"].alias("state"),
-                                   df_data_formatada["cnpj"],
-                                   df_data_formatada["address_type"],
-                                   df_data_formatada["number"],
-                                   df_data_formatada["date_end"]
-                                    )
+df_colunas = df_data_formatada.select(df_data_formatada["cnpj"],
+                                      df_data_formatada["address_type"],
+                                      df_data_formatada["data"].alias("registration_date"),
+                                      df_data_formatada["date_end"],
+                                      df_data_formatada["endereco"].alias("street"),
+                                      df_data_formatada["complemento"].alias("complement"),
+                                      df_data_formatada["number"],
+                                      df_data_formatada["bairro"].alias("neighborhood"),
+                                      df_data_formatada["municipio"].alias("city"),
+                                      df_data_formatada["uf"].alias("state"),
+                                      df_data_formatada["cep"].alias("postalcode"))
+
 
 df_colunas.withColumn("branch_code", F.lit(None))
+
 # df_final.printSchema()
 
 df_final = df_colunas.withColumn("postalcode", F.regexp_replace(F.col("postalcode"), "-", ""))
@@ -214,7 +189,7 @@ teste = df_final.filter(F.col("postalcode").rlike("[^a-zA-Z0-9]"))
 # --------------------------------------------------------------------
 
 # Carregar dados do DW
-dw_dim_endereco = spark.read.jdbc(url="jdbc:postgresql://localhost:5432/dw_finance", table="dim_endereco", properties=db_properties)
+dw_dim_endereco = table_to_df('dw_finance', 'dim_endereco', spark)
 
 dw_dim_endereco.createOrReplaceTempView("dim_endereco")
 
@@ -231,22 +206,15 @@ WHERE dw.date_end IS NULL; -- Considerando apenas os registros ativos sem data d
 
 sql_insert = """
 
-INSERT INTO dim_endereco (registration_date, street, complement, neighborhood, city, postalcode, state, cnpj, address_type, number, date_end)
-SELECT registration_date, street, complement, neighborhood, city, postalcode, state, cnpj, address_type, number, date_end
+INSERT INTO dim_endereco (cnpj, address_type, registration_date, date_end, street, complement, number, neighborhood, city, state, postalcode, branch_code)
+SELECT cnpj, address_type, registration_date, date_end, street, complement, number, neighborhood, city, state, postalcode, branch_code
 FROM df_final;
 """
 
 # Após todas as transformações, obtenha a data máxima dos dados processados
-max_date = df_final.agg({"data": "max"}).collect()[0][0]
+max_date = df_final.agg({"data": "max"})
 
-def update_last_load_date(data, table_name, data_type)
-    sql_update_dw_load_control = f"""
-        INSERT INTO dw_load_control (load_date, table_name, data_type)
-        VALUES ('{data}', '{table_name}', '{data_type}');
-    """
-
-
-spark.sql(update_last_load_date(max_date, "dim_endereco", "sede"))
+spark.sql(T.update_last_load_date(max_date, "dim_endereco", "sede"))
 spark.sql(sql_update)
 spark.sql(sql_insert)
                                  
