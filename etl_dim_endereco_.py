@@ -1,33 +1,24 @@
-import os
+# PRIMEIRA CARGA NO DW
 from pyspark.sql import SparkSession
-from generate_df import table_to_df
+import generate_df as G
 from IPython.display import display, HTML
 from tabulate import tabulate
 from functools import reduce
 from pyspark.sql import DataFrame
 from pyspark.sql import functions as F
-from pyspark.sql.types import IntegerType
+from pyspark.sql import types as T
 from unidecode import unidecode
+import table_load_control as Load_Control
 
-# Definir o caminho do Spark corretamente
-os.environ['SPARK_HOME'] = '/home/daiane/spark-3.5.1-bin-hadoop3/'
+spark = SparkSession.builder.appName("finance_data_processing").getOrCreate()
 
-# Definir o caminho do Java corretamente
-os.environ['JAVA_HOME'] = '/usr/lib/jvm/java-1.17.0-openjdk-amd64/'
+# print(spark)
 
-# Iniciar uma sessão Spark
-spark = SparkSession.builder \
-    .appName("Exemplo Spark") \
-    .getOrCreate()
-
-# Testar a sessão Spark
-spark
-
-df_agencias = table_to_df('finance_raw_data', 'agencias', spark)
-df_bancos = table_to_df('finance_raw_data', 'bancos', spark)
-df_cooperativas_credito = table_to_df('finance_raw_data', 'cooperativas_credito', spark)
-df_sociedades = table_to_df('finance_raw_data', 'sociedades', spark)
-df_address_adm_consorcio = table_to_df('finance_raw_data', 'administradoras_consorcio', spark)
+df_agencias = G.table_to_df('finance_raw_data', 'agencias', spark)
+df_bancos = G.table_to_df('finance_raw_data', 'bancos', spark)
+df_cooperativas_credito = G.table_to_df('finance_raw_data', 'cooperativas_credito', spark)
+df_sociedades = G.table_to_df('finance_raw_data', 'sociedades', spark)
+df_address_adm_consorcio = G.table_to_df('finance_raw_data', 'administradoras_consorcio', spark)
 
 #colunas para a dim_endereco: id, cnpj, address_type, registration_date, date_end, street,
 #complement, number,  neighborhood, city, postalcode, state
@@ -35,24 +26,24 @@ df_address_adm_consorcio = table_to_df('finance_raw_data', 'administradoras_cons
 colunas = ["cnpj", "data", "endereco","complemento", "bairro",  "municipio","cep", "uf"]
 
 
-df_address_adm_consorcio_selected = df_address_adm_consorcio.select(colunas).withColumn("address_type", F.lit("SEDE"))
-df_bancos_selected = df_bancos.select(colunas).withColumn("address_type", F.lit("SEDE"))
-df_cooperativas_credito_selected = df_cooperativas_credito.select(colunas).withColumn("address_type", F.lit("SEDE"))
-df_sociedades_selected = df_sociedades.select(colunas).withColumn("address_type", F.lit("SEDE"))
-df_agencias_selected = df_agencias.select(colunas).withColumn("address_type", F.lit("AGENCIA"))
+df_address_adm_consorcio_selected = df_address_adm_consorcio.select(colunas)
+df_bancos_selected = df_bancos.select(colunas)
+df_cooperativas_credito_selected = df_cooperativas_credito.select(colunas)
+df_sociedades_selected = df_sociedades.select(colunas)
 
-dataframes_selected = [df_address_adm_consorcio_selected, df_bancos_selected, df_cooperativas_credito_selected, df_sociedades_selected, df_agencias_selected]
+
+dataframes_selected = [df_address_adm_consorcio_selected, df_bancos_selected, df_cooperativas_credito_selected, df_sociedades_selected]
 
 dataframes_selected = [
-    df.withColumn("number", F.lit(None).cast("integer"))
-      .withColumn("date_end", F.lit(None).cast("date"))
+    df.withColumn("number", F.lit(None))
+      .withColumn("date_end", F.lit(None))
     for df in dataframes_selected
 ]
 
 def unionAll(dataframes):
     return reduce(DataFrame.unionAll, dataframes)
 
-df_enderecos = unionAll(dataframes_selected)
+df_enderecos = unionAll(dataframes_selected).withColumn("address_type", F.lit("SEDE"))
 
 #colunas_ordem = ["cnpj",  "address_type", "data", "date_end", "endereco","complemento", "number", "bairro",  "municipio","cep", "uf"]
 
@@ -190,19 +181,6 @@ df_pos_numero_tratado = df_endereco_sem_especial.drop("apos_numero")
 
 df_pos_numero_tratado.persist()
 
-df_pos_numero_tratado.createOrReplaceTempView("view_temporariaa")
-
-df = spark.sql("SELECT endereco, number, complemento, data FROM view_temporariaa").limit(50)
-
-# df = spark.sql(" SELECT apos_numero, COUNT(*) as freq from view_temporariaa group by apos_numero order by freq desc ").show(50)
-
-# df = spark.sql("select * from view_temporariaa ")
-
-table = tabulate(df.collect(), headers=df.columns, tablefmt='html')
-
-# display(HTML(table))
-
-# df_pos_numero_tratado.printSchema()
 
 def clean_accent_(texto):
     return unidecode(texto) if texto else None
@@ -214,7 +192,6 @@ df_sem_acento = df_pos_numero_tratado.withColumn("endereco", F.upper(clean_accen
                                      .withColumn("uf", F.upper(clean_accent(F.col("uf"))))\
                                     .withColumn("municipio", F.upper(clean_accent(F.col("municipio"))))
 
-# df_sem_acento.show(20, truncate=False)
 
 all_columns = df_sem_acento.columns
 
@@ -222,34 +199,48 @@ colunas_ = list(filter(lambda col: col != "data", all_columns))
 
 df_unique = df_sem_acento.dropDuplicates(subset=colunas_)
 
-# df_grouped = df_unique.groupBy(colunas_).count()
-
-# df_duplicates = df_grouped.filter(F.col("count") > 1)
-
-
-# if df_duplicates.count() > 0:
-#     print("Há linhas duplicadas no DataFrame.")
-#     print(df_duplicates.count() )
-# else:
-#     print("Não há linhas duplicadas no DataFrame.")
-
 df_data_formatada = df_unique.withColumn("data", F.to_date(F.col("data")))
 
 df_data_formatada_sample = df_data_formatada.sample(False, 0.1)
 
-# table = tabulate(df_data_formatada_sample.collect(), headers=df_data_formatada_sample.columns, tablefmt='html')
+df_colunas = df_data_formatada.select(
+    df_data_formatada["cnpj"].cast(T.StringType()),
+    df_data_formatada["address_type"].cast(T.StringType()),
+    df_data_formatada["data"].alias("registration_date").cast(T.DateType()),  
+    df_data_formatada["date_end"].cast(T.DateType()),  
+    df_data_formatada["endereco"].alias("street").cast(T.StringType()),
+    df_data_formatada["complemento"].alias("complement").cast(T.StringType()),
+    df_data_formatada["number"].cast(T.IntegerType()),  
+    df_data_formatada["bairro"].alias("neighborhood").cast(T.StringType()),
+    df_data_formatada["municipio"].alias("city").cast(T.StringType()),
+    df_data_formatada["uf"].alias("state").cast(T.StringType()),
+    df_data_formatada["cep"].alias("postalcode").cast(T.StringType())
+)
 
-# display(HTML(table))
 
-df_final = df_data_formatada.select(df_data_formatada["data"].alias("registration_date"),
-                                    df_data_formatada["endereco"].alias("street"),
-                                     df_data_formatada["complemento"].alias("complement"),
-                                    df_data_formatada["bairro"].alias("neighborhood"),
-                                     df_data_formatada["municipio"].alias("city"),
-                                    df_data_formatada["cep"].alias("postalcode"),
-                                     df_data_formatada["uf"].alias("state"),
-                                   df_data_formatada["cnpj"],
-                                   df_data_formatada["address_type"],
-                                   df_data_formatada["number"],
-                                   df_data_formatada["date_end"])
-# df_final.printSchema()
+df_colunas.withColumn("branch_code", F.lit(None).cast(T.StringType()))
+
+df_final = df_colunas.withColumn("postalcode", F.regexp_replace(F.col("postalcode"), "-", ""))
+
+df_final.createOrReplaceTempView("df_final")
+
+dw_dim_endereco = G.table_to_df('dw_finance', 'dim_endereco', spark)
+
+dw_dim_endereco.createOrReplaceTempView("dim_endereco")
+
+
+# df_final.write.mode("append").saveAsTable("dim_endereco")
+
+# G.df_write_to_table(df_final, "dw_finance", "dim_endereco")
+
+sql_insert = """INSERT INTO dim_endereco (cnpj, address_type, registration_date, date_end, street, complement, number, neighborhood, city, state, postalcode, branch_code)
+SELECT cnpj, address_type, registration_date, date_end, street, complement, number, neighborhood, city, state, postalcode, branch_code
+FROM df_final;
+"""
+
+max_date = df_final.agg({"data": "max"})
+
+# spark.sql(Load_Control.update_last_load_date(max_date, "dim_endereco", "SEDE"))
+spark.sql(sql_insert)
+
+                                 
