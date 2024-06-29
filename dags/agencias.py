@@ -72,7 +72,7 @@ dag = DAG(
 )
 
 collect_and_save_data_task = PythonOperator(
-    task_id='collect_and_save_data_task',
+    task_id='collect_agencias',
     python_callable=collect_and_save_data,
     dag=dag,
 )
