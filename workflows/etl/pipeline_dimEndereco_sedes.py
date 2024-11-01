@@ -3,18 +3,19 @@ from airflow import DAG
 from airflow.operators.python_operator import PythonOperator
 from pyspark.sql import SparkSession
 import generate_df as G
-from IPython.display import display, HTML
+#from IPython.display import display, HTML
 from tabulate import tabulate
 from functools import reduce
 from pyspark.sql import DataFrame
 from pyspark.sql import functions as F
 from pyspark.sql import types as T
 from unidecode import unidecode
-import table_load_control as Load_Control
+#import table_load_control as Load_Control
 from config import db_config
 from airflow.operators.dagrun_operator import TriggerDagRunOperator
 from airflow.sensors.external_task_sensor import ExternalTaskSensor
 import logging
+from conexao_db import connect_db
 
 # Configuração do logger
 logging.basicConfig(level=logging.INFO)
@@ -27,7 +28,7 @@ def etl_dim_endereco_sede():
         .config("spark.jars","/home/daiane/Downloads/postgresql-42.7.3.jar").getOrCreate()
 
         logger.info("Lendo a tabela de controle de carga")
-        last_load_date = G.table_to_df('dw_finance', 'dw_load_control')
+        last_load_date = G.table_to_df('dw_finance', 'dw_load_control', spark)
 
         logger.info("Obtendo a última data de carga")
         date_row = last_load_date.agg(F.max(F.col("load_date")).alias("max_date")).collect()[0]
@@ -179,12 +180,16 @@ def etl_dim_endereco_sede():
         logger.info("Atualizando date_end para registros que receberam atualização")
         dim_endereco = G.table_to_df('dw_finance', 'dim_endereco', spark)
 
-        joined_df = dim_endereco.join(df_final, dim_endereco["cnpj"] == df_final["cnpj"], "left_outer") \
-            .where(dim_endereco["date_end"].isNull())
+        dim_endereco_filtered = dim_endereco.where(dim_endereco["date_end"].isNull())
 
-        update_df = joined_df.select(df_final["date_end"].alias("new_date_end"), dim_endereco["*"])
 
-        dim_endereco_updated = update_df.withColumn("date_end", F.col("new_date_end")).drop("new_date_end")
+        joined_df = dim_endereco.join(df_final, dim_endereco_filtered["cnpj"] == df_final["cnpj"], "inner") \
+            .select(dim_endereco["cnpj"], df_final["registration_date"])
+
+
+        # update_df = joined_df.select(df_final["date_end"].alias("new_date_end"), dim_endereco["*"])
+
+        # dim_endereco_updated = update_df.withColumn("date_end", F.col("new_date_end")).drop("new_date_end")
 
         max_date_row = df_final.agg(F.max(F.col("registration_date")).alias("max_date")).collect()[0]
         last_date = max_date_row["max_date"]
@@ -205,6 +210,44 @@ def etl_dim_endereco_sede():
         config_table_load_control = db_config("dw_finance", "dw_load_control")
 
         logger.info("Salvando os dados na tabela dim_endereco")
+
+        df_final = df_final.withColumn("branch_code", F.lit(None).cast(T.StringType()))
+
+        df_final = df_final.withColumn("number", df_final["number"].cast(T.IntegerType()))
+
+
+
+        joined_df.createOrReplaceTempView("temp_date_end_updated")
+
+        # Executar a atualização na tabela original
+        conexao = connect_db("dw_finance")
+
+        curs = conexao.cursor()
+
+        ids_para_atualizar = [linha["cnpj"] for linha in joined_df.collect()]
+
+        update_query = """
+            UPDATE dim_endereco
+            SET date_end = %s
+            WHERE cnpj = %s
+        """
+
+        for cnpj in ids_para_atualizar:
+            curs.execute(update_query, (last_date, cnpj))
+
+
+        conexao.commit()
+
+        logger.info("date_end atualizado")
+        
+
+        # dim_endereco_updated.write.mode("overwrite").format("jdbc").options(
+        #     url=config_dim_endereco["url"],
+        #     dbtable=config_dim_endereco["dbtable"],
+        #     user=config_dim_endereco["user"],
+        #     password=config_dim_endereco["password"],
+        #     driver=config_dim_endereco["driver"]).save()
+
         df_final.write.mode("append").format("jdbc").options(
             url=config_dim_endereco["url"],
             dbtable=config_dim_endereco["dbtable"],
@@ -213,15 +256,9 @@ def etl_dim_endereco_sede():
             driver=config_dim_endereco["driver"]
         ).save()
 
-        dim_endereco_updated.write.mode("overwrite").format("jdbc") \
-            .options(
-            url=config_dim_endereco["url"],
-            dbtable=config_dim_endereco["dbtable"],
-            user=config_dim_endereco["user"],
-            password=config_dim_endereco["password"],
-            driver=config_dim_endereco["driver"]).save()
 
         logger.info("Salvando os dados na tabela de controle de carga")
+
         last_date_df.write.mode("append").format("jdbc").options(
             url=config_table_load_control["url"],
             dbtable=config_table_load_control["dbtable"],
@@ -254,20 +291,14 @@ dag = DAG(
     catchup=False
 )
 
-run_pipeline_task = PythonOperator(
-    task_id='etl_dim_endereco_sedes',
-    python_callable=etl_dim_endereco_sede,
-    dag=dag,
-)
 
 # Sensors to wait for the other DAGs
 wait_for_sedesBancos = ExternalTaskSensor(
     task_id='wait_for_sedes_bancos',
     external_dag_id='Sedes_bancos', 
     external_task_id='collect_sedes_bancos',  
-    mode='poke',
-    poke_interval=300,
-    timeout=6000,
+    mode='reschedule',               
+    timeout=300,
     dag=dag,
 )
 
@@ -275,9 +306,8 @@ wait_for_sedesCooperativas = ExternalTaskSensor(
     task_id='wait_for_sedes_cooperativas',
     external_dag_id='sedes_cooperativas_credito',
     external_task_id='collect_sedes_cooperativas',
-    mode='poke',
-    poke_interval=300,
-    timeout=6000,
+    mode='reschedule',               
+    timeout=300,
     dag=dag,
 )
 
@@ -285,9 +315,8 @@ wait_for_sedesSociedades = ExternalTaskSensor(
     task_id='wait_for_sedes_sociedades',
     external_dag_id='sedes_sociedades',
     external_task_id='collect_sedes_sociedades',
-    mode='poke',
-    poke_interval=300,
-    timeout=6000,
+    mode='reschedule',               
+    timeout=300,
     dag=dag,
 )
 
@@ -295,11 +324,19 @@ wait_for_sedesAdministradoras = ExternalTaskSensor(
     task_id='wait_for_sedes_administradoras',
     external_dag_id='sedes_administradoras_consorcio',
     external_task_id='collect_sedes_administradoras',
-    mode='poke',
-    poke_interval=300,
-    timeout=6000,
+    mode='reschedule',               
+    timeout=300,
     dag=dag,
 )
 
+run_pipeline_task = PythonOperator(
+    task_id='etl_dim_endereco_sedes',
+    python_callable=etl_dim_endereco_sede,
+    dag=dag,
+)
+
+
+
 [wait_for_sedesBancos, wait_for_sedesCooperativas, wait_for_sedesSociedades, wait_for_sedesAdministradoras] >> run_pipeline_task
+
 
