@@ -64,13 +64,13 @@ Modelar os dados finais para análise e consumo por ferramentas de BI, aplicando
 - **dbt (Data Build Tool):** Considerado na etapa de transformação da Camada Prata para Ouro, promovendo boas práticas de versionamento, testes e documentação dos modelos.  
 - **PostgreSQL:** Banco de dados utilizado para as camadas de staging (Prata) e final (Ouro).  
 ---
-<details> <summary><strong>
-    flowchart TD
+```mermaid
+flowchart TD
     %% Camada Bronze - Raw Data
-    A[Dados Brutos<br/>(Arquivos locais - Data Lake)] 
+    A[Data Bruta<br/>(Arquivos locais - Data Lake)] 
 
     %% Camada Prata - Staging
-    B[Processamento<br/>(PostgreSQL - Camada Prata)]
+    B[Processamento e Deduplicação<br/>(PostgreSQL - Camada Prata)]
     
     %% Camada Ouro - Data Warehouse
     C[Data Warehouse<br/>(PostgreSQL - Fatos e Dimensões)]
@@ -80,7 +80,7 @@ Modelar os dados finais para análise e consumo por ferramentas de BI, aplicando
     E[dbt + SQL<br/>(Modelagem para Camada Ouro)]
     
     %% Análise e Visualização
-    F[Python/Pandas<br/>(Análise Exploratório)]
+    F[Python/Pandas<br/>(Análise Exploratória)]
     G[BI / Visualizações]
     
     %% Conexões entre as camadas
@@ -97,9 +97,6 @@ Modelar os dados finais para análise e consumo por ferramentas de BI, aplicando
     %% Notas de migração futura
     H[Versão 2: Migração para Cloud<br/>(Ex.: Azure Data Lake, Azure Synapse)]
     C --- H
-</strong></summary>
-
-
 
 Este projeto é uma iniciativa de estudo e experimentação, voltada para a aprendizagem prática de técnicas e tecnologias modernas no gerenciamento e análise de dados. As escolhas tecnológicas foram fundamentadas na relevância e aplicabilidade em cenários reais, contribuindo para o desenvolvimento de habilidades essenciais na área de Data Warehouse.
 
