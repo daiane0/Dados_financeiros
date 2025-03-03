@@ -65,6 +65,40 @@ Modelar os dados finais para análise e consumo por ferramentas de BI, aplicando
 - **PostgreSQL:** Banco de dados utilizado para as camadas de staging (Prata) e final (Ouro).  
 ---
 
+flowchart TD
+    %% Camada Bronze - Raw Data
+    A[Dados Brutos<br/>(Arquivos locais - Data Lake)] 
+
+    %% Camada Prata - Staging
+    B[Processamento<br/>(PostgreSQL - Camada Prata)]
+    
+    %% Camada Ouro - Data Warehouse
+    C[Data Warehouse<br/>(PostgreSQL - Fatos e Dimensões)]
+    
+    %% Pipeline de ETL e Transformação
+    D[PySpark<br/>(ETL para Camada Prata)]
+    E[dbt + SQL<br/>(Modelagem para Camada Ouro)]
+    
+    %% Análise e Visualização
+    F[Python/Pandas<br/>(Análise Exploratório)]
+    G[BI / Visualizações]
+    
+    %% Conexões entre as camadas
+    A --> D
+    D --> B
+    B --> E
+    E --> C
+    
+    %% Fluxo de Análise
+    A --- F
+    C --- F
+    F --> G
+    
+    %% Notas de migração futura
+    H[Versão 2: Migração para Cloud<br/>(Ex.: Azure Data Lake, Azure Synapse)]
+    C --- H
+
+
 Este projeto é uma iniciativa de estudo e experimentação, voltada para a aprendizagem prática de técnicas e tecnologias modernas no gerenciamento e análise de dados. As escolhas tecnológicas foram fundamentadas na relevância e aplicabilidade em cenários reais, contribuindo para o desenvolvimento de habilidades essenciais na área de Data Warehouse.
 
 
