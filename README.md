@@ -6,6 +6,8 @@ Este é um projeto de estudo desenvolvido para explorar e aplicar conceitos de D
 ## Resumo da Arquitetura do Projeto
 
 O projeto é estruturado em três camadas – **Bronze**, **Prata** e **Ouro** – que garantem a integridade, escalabilidade e o histórico dos dados.
+
+```mermaid
 graph TD
     subgraph Data Sources
         API1[API JSON]
@@ -14,19 +16,20 @@ graph TD
         API4[Outra Fonte]
     end
 
-    subgraph Data Lake - Bronze
+    subgraph "Data Lake - Bronze"
         FS[Local File System]
-        FS -->|Armazena| BronzeDir[/pastas_brutas/]
+        BronzeDir[/pastas_brutas/]
+        FS -->|Armazena| BronzeDir
         BronzeDir --> Banco[banco/]
         BronzeDir --> Cooperativa[cooperativa/]
         BronzeDir --> Financeira[financeira/]
         BronzeDir --> Outra[outra/]
     end
 
-    subgraph Data Warehouse - Silver/Gold
+    subgraph "Data Warehouse - Silver/Gold"
         PostgreSQL[(PostgreSQL)]
-        PostgreSQL --> SilverSchema[schema silver]
-        PostgreSQL --> GoldSchema[schema gold]
+        PostgreSQL --> SilverSchema[schema_silver]
+        PostgreSQL --> GoldSchema[schema_gold]
     end
 
     subgraph Transformation
@@ -44,17 +47,12 @@ graph TD
         Airflow -->|Agenda| SQL
     end
 
-    subgraph Future Cloud - Azure
-        ADLS[Azure Data Lake Storage]
-        AzureDB[Azure SQL DB/Synapse]
-    end
-
     API1 -->|Ingere| FS
     API2 -->|Ingere| FS
     API3 -->|Ingere| FS
     API4 -->|Ingere| FS
-    BronzeDir -.->|Migração Futura| ADLS
-    PostgreSQL -.->|Migração Futura| AzureDB
+```
+    
 ---
 
 ### Camada Bronze (Data Lake)
