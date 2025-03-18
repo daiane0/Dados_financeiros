@@ -6,7 +6,55 @@ Este é um projeto de estudo desenvolvido para explorar e aplicar conceitos de D
 ## Resumo da Arquitetura do Projeto
 
 O projeto é estruturado em três camadas – **Bronze**, **Prata** e **Ouro** – que garantem a integridade, escalabilidade e o histórico dos dados.
+graph TD
+    subgraph Data Sources
+        API1[API JSON]
+        API2[API CSV]
+        API3[API Externa]
+        API4[Outra Fonte]
+    end
 
+    subgraph Data Lake - Bronze
+        FS[Local File System]
+        FS -->|Armazena| BronzeDir[/pastas_brutas/]
+        BronzeDir --> Banco[banco/]
+        BronzeDir --> Cooperativa[cooperativa/]
+        BronzeDir --> Financeira[financeira/]
+        BronzeDir --> Outra[outra/]
+    end
+
+    subgraph Data Warehouse - Silver/Gold
+        PostgreSQL[(PostgreSQL)]
+        PostgreSQL --> SilverSchema[schema silver]
+        PostgreSQL --> GoldSchema[schema gold]
+    end
+
+    subgraph Transformation
+        PySpark[PySpark]
+        SQL[SQL]
+        PySpark -->|Processa| BronzeDir
+        PySpark -->|Salva| SilverSchema
+        SQL -->|Transforma| SilverSchema
+        SQL -->|Salva| GoldSchema
+    end
+
+    subgraph Orchestration
+        Airflow[Apache Airflow]
+        Airflow -->|Orquestra| PySpark
+        Airflow -->|Agenda| SQL
+    end
+
+    subgraph Future Cloud - Azure
+        ADLS[Azure Data Lake Storage]
+        AzureDB[Azure SQL DB/Synapse]
+    end
+
+    API1 -->|Ingere| FS
+    API2 -->|Ingere| FS
+    API3 -->|Ingere| FS
+    API4 -->|Ingere| FS
+    BronzeDir -.->|Migração Futura| ADLS
+    PostgreSQL -.->|Migração Futura| AzureDB
 ---
 
 ### Camada Bronze (Data Lake)
