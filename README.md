@@ -6,52 +6,7 @@ Este é um projeto de estudo desenvolvido para explorar e aplicar conceitos de D
 ## Resumo da Arquitetura do Projeto
 
 O projeto é estruturado em três camadas – **Bronze**, **Prata** e **Ouro** – que garantem a integridade, escalabilidade e o histórico dos dados.
-
-```mermaid
-graph TD
-    subgraph Data Sources
-        API1[API JSON]
-        API2[API CSV]
-        API3[API Externa]
-        API4[Outra Fonte]
-    end
-
-    subgraph "Data Lake - Bronze"
-        FS[Local File System]
-        BronzeDir[/pastas_brutas/]
-        FS -->|Armazena| BronzeDir
-        BronzeDir --> Banco[banco/]
-        BronzeDir --> Cooperativa[cooperativa/]
-        BronzeDir --> Financeira[financeira/]
-        BronzeDir --> Outra[outra/]
-    end
-
-    subgraph "Data Warehouse - Silver/Gold"
-        PostgreSQL[(PostgreSQL)]
-        PostgreSQL --> SilverSchema[schema_silver]
-        PostgreSQL --> GoldSchema[schema_gold]
-    end
-
-    subgraph Transformation
-        PySpark[PySpark]
-        SQL[SQL]
-        PySpark -->|Processa| BronzeDir
-        PySpark -->|Salva| SilverSchema
-        SQL -->|Transforma| SilverSchema
-        SQL -->|Salva| GoldSchema
-    end
-
-    subgraph Orchestration
-        Airflow[Apache Airflow]
-        Airflow -->|Orquestra| PySpark
-        Airflow -->|Agenda| SQL
-    end
-
-    API1 -->|Ingere| FS
-    API2 -->|Ingere| FS
-    API3 -->|Ingere| FS
-    API4 -->|Ingere| FS
-```
+![Arquitetura Bronze-Prata-Ouro](diagrama.png)
     
 ---
 
